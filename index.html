@@ -160,7 +160,7 @@ const MY_ID =
 window.changeStatus = async (text, color) => {
 
     const { error } = await supabase
-        .from('profiles')
+        .from('Profiles')
         .update({
             status: text,
             color: color
