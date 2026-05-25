@@ -184,7 +184,7 @@ window.changeStatus = async (text, color) => {
 async function fetchGroup() {
 
     const { data, error } = await supabase
-        .from('profiles')
+        .from('Profiles')
         .select('*')
         .order('username', { ascending:true });
 
