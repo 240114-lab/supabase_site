@@ -54,22 +54,10 @@
         font-weight:bold;
     }
 
-    .study{
-        background:#28a745;
-    }
-
-    .coffee{
-        background:#f0b400;
-        color:black;
-    }
-
-    .game{
-        background:#17a2b8;
-    }
-
-    .home{
-        background:#6c757d;
-    }
+    .study  { background:#28a745; }
+    .coffee { background:#f0b400; color:black; }
+    .game   { background:#17a2b8; }
+    .home   { background:#6c757d; }
 
     .user-item{
         display:flex;
@@ -82,164 +70,218 @@
         width:12px;
         height:12px;
         border-radius:50%;
+        flex-shrink:0;
     }
 
-    .user-name{
-        font-weight:bold;
-    }
+    .user-name   { font-weight:bold; }
 
-    .user-status{
+    .user-status {
         color:#777;
         font-size:13px;
+    }
+
+    .user-timer{
+        font-size:12px;
+        color:#aaa;
+        margin-top:2px;
+    }
+
+    /* my session summary */
+    .session-row{
+        display:flex;
+        justify-content:space-between;
+        font-size:13px;
+        color:#555;
+        margin-top:6px;
+    }
+    .session-row span:last-child{
+        font-weight:bold;
+        color:#333;
     }
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
     <!-- Профиль -->
     <div class="card">
         <h3>Мой профиль</h3>
-
-        <div class="subtitle" id="myInfo">
-            Загрузка...
-        </div>
+        <div class="subtitle" id="myInfo">Загрузка...</div>
 
         <div class="buttons">
-            <button class="study"
-                onclick="changeStatus('📚 Учусь', '#28a745')">
-                📚 Учусь
-            </button>
+            <button class="study"  onclick="changeStatus('📚 Учусь',      '#28a745')">📚 Учусь</button>
+            <button class="coffee" onclick="changeStatus('☕ Кофе-брейк', '#f0b400')">☕ Кофе</button>
+            <button class="game"   onclick="changeStatus('🎮 В игре',      '#17a2b8')">🎮 В игре</button>
+            <button class="home"   onclick="changeStatus('🏠 Дома',        '#6c757d')">🏠 Дома</button>
+        </div>
 
-            <button class="coffee"
-                onclick="changeStatus('☕ Кофе-брейк', '#f0b400')">
-                ☕ Кофе
-            </button>
-
-            <button class="game"
-                onclick="changeStatus('🎮 В игре', '#17a2b8')">
-                🎮 В игре
-            </button>
-
-            <button class="home"
-                onclick="changeStatus('🏠 Дома', '#6c757d')">
-                🏠 Дома
-            </button>
+        <!-- My session summary -->
+        <div style="margin-top:14px;border-top:1px solid #eee;padding-top:12px;">
+            <div style="font-size:13px;font-weight:bold;margin-bottom:6px;color:#444;">Сессия сегодня</div>
+            <div class="session-row"><span>📚 Учёба</span>    <span id="s-study">0 мин</span></div>
+            <div class="session-row"><span>☕ Кофе-брейк</span><span id="s-coffee">0 мин</span></div>
+            <div class="session-row"><span>🎮 В игре</span>   <span id="s-game">0 мин</span></div>
+            <div class="session-row"><span>🏠 Дома</span>     <span id="s-home">0 мин</span></div>
+            <div class="session-row" style="border-top:1px solid #eee;padding-top:6px;margin-top:4px;">
+                <span>Всего активно</span><span id="s-total">0 мин</span>
+            </div>
         </div>
     </div>
 
     <!-- Монитор группы -->
     <div class="card">
         <h3>Монитор группы</h3>
-
         <div id="groupList"></div>
     </div>
 
 </div>
 
-<!-- SUPABASE -->
 <script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-import { createClient }
-from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-
-const URL = 'https://kvjbedcqrsahohactbmc.supabase.co';
-
-const KEY =
-'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2amJlZGNxcnNhaG9oYWN0Ym1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MTkzOTYsImV4cCI6MjA5NTE5NTM5Nn0.vCz0_gqJmjCTcjf1EF_wu7I1QLdDjblhiQSWVOuh6Vs';
-
+const URL  = 'https://kvjbedcqrsahohactbmc.supabase.co';
+const KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2amJlZGNxcnNhaG9oYWN0Ym1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MTkzOTYsImV4cCI6MjA5NTE5NTM5Nn0.vCz0_gqJmjCTcjf1EF_wu7I1QLdDjblhiQSWVOuh6Vs';
 const supabase = createClient(URL, KEY);
 
-const MY_ID =
-'65bd1c0f-3ef6-496b-8a00-3b0b14a54509';
+const MY_ID = '65bd1c0f-3ef6-496b-8a00-3b0b14a54509';
 
+// ── Helpers ──────────────────────────────────────────────
 
-// Изменение статуса
+function fmtDuration(seconds) {
+    if (seconds < 60)  return `${seconds} сек`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} мин`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h} ч ${m} мин` : `${h} ч`;
+}
+
+function elapsed(isoString) {
+    if (!isoString) return 0;
+    return Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
+}
+
+// ── Status change ─────────────────────────────────────────
+
 window.changeStatus = async (text, color) => {
-
+    const now = new Date().toISOString();
     const { error } = await supabase
         .from('Profiles')
-        .update({
-            status: text,
-            color: color
-        })
+        .update({ status: text, color, status_changed_at: now })
         .eq('id', MY_ID);
 
     if (error) {
-
         alert('Ошибка! Проверьте RLS политики.');
         console.error(error);
-
     } else {
-
         fetchGroup();
-
     }
 };
 
+// ── Render ────────────────────────────────────────────────
 
-// Получение списка пользователей
+let groupData = [];   // keep latest data for live timer updates
+
+function renderGroup() {
+    const list = document.getElementById('groupList');
+    list.innerHTML = groupData.map(user => {
+        const sec = elapsed(user.status_changed_at);
+        const timerText = user.status_changed_at
+            ? `уже ${fmtDuration(sec)}`
+            : '';
+        return `
+        <div class="user-item">
+            <div class="status-dot" style="background:${user.color || '#ccc'}"></div>
+            <div>
+                <div class="user-name">${user.username}</div>
+                <div class="user-status">${user.status || 'Статус не указан'}</div>
+                ${timerText ? `<div class="user-timer">${timerText}</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderMySummary(sessions) {
+    // sessions: array of { status, started_at, ended_at|null }
+    const buckets = { study: 0, coffee: 0, game: 0, home: 0 };
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    for (const s of sessions) {
+        const start = new Date(s.started_at);
+        if (start < todayStart) continue;   // only today
+
+        const end   = s.ended_at ? new Date(s.ended_at) : new Date();
+        const secs  = Math.max(0, Math.floor((end - start) / 1000));
+
+        if (s.status.includes('Учусь'))       buckets.study  += secs;
+        else if (s.status.includes('Кофе'))   buckets.coffee += secs;
+        else if (s.status.includes('игре'))   buckets.game   += secs;
+        else if (s.status.includes('Дома'))   buckets.home   += secs;
+    }
+
+    const total = Object.values(buckets).reduce((a,b) => a+b, 0);
+
+    document.getElementById('s-study') .textContent = fmtDuration(buckets.study);
+    document.getElementById('s-coffee').textContent = fmtDuration(buckets.coffee);
+    document.getElementById('s-game')  .textContent = fmtDuration(buckets.game);
+    document.getElementById('s-home')  .textContent = fmtDuration(buckets.home);
+    document.getElementById('s-total') .textContent = fmtDuration(total);
+}
+
+// ── Fetch ─────────────────────────────────────────────────
+
 async function fetchGroup() {
-
     const { data, error } = await supabase
         .from('Profiles')
         .select('*')
-        .order('username', { ascending:true });
+        .order('username', { ascending: true });
 
-    if(error)
-        return console.error(error);
+    if (error) return console.error(error);
 
-    const list =
-        document.getElementById('groupList');
+    groupData = data;
+    renderGroup();
 
-    list.innerHTML = data.map(user => `
-
-        <div class="user-item">
-
-            <div class="status-dot"
-                style="background:${user.color || '#ccc'}">
-            </div>
-
-            <div>
-                <div class="user-name">
-                    ${user.username}
-                </div>
-
-                <div class="user-status">
-                    ${user.status || 'Статус не указан'}
-                </div>
-            </div>
-
-        </div>
-
-    `).join('');
-
-
-
-    // Информация о себе
-    const me = data.find(u => u.id == MY_ID);
-
-    if(me){
-
-        document.getElementById('myInfo')
-            .innerText =
+    const me = data.find(u => u.id === MY_ID);
+    if (me) {
+        document.getElementById('myInfo').textContent =
             `Вы зашли как: ${me.username}`;
-
     }
-
 }
 
+async function fetchMySessions() {
+    // Requires a Sessions table: id, user_id, status, started_at, ended_at
+    const { data, error } = await supabase
+        .from('Sessions')
+        .select('status, started_at, ended_at')
+        .eq('user_id', MY_ID)
+        .order('started_at', { ascending: false })
+        .limit(200);
 
-// Первый запуск
+    if (error) {
+        // Table may not exist yet — silently skip summary
+        console.warn('Sessions table not found or inaccessible:', error.message);
+        return;
+    }
+
+    renderMySummary(data || []);
+}
+
+// ── Boot ──────────────────────────────────────────────────
+
 fetchGroup();
+fetchMySessions();
 
+// Re-fetch from DB every 5 s
+setInterval(() => {
+    fetchGroup();
+    fetchMySessions();
+}, 5000);
 
-// Автообновление каждые 5 сек
-setInterval(fetchGroup, 5000);
+// Redraw timers from cached data every second (no extra DB calls)
+setInterval(renderGroup, 1000);
 
 </script>
-
 </body>
 </html>
